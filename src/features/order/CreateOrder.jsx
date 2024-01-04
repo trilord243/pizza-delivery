@@ -2,7 +2,13 @@
 import { Form, redirect, useNavigation, useActionData } from "react-router-dom";
 import { createOrder } from "../../services/apiRestaurant";
 import Button from "../../ui/Button";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { clearCart, getCart, getCartItems, getTotalCartPrice } from "../cart/cartSlice";
+import EmptyCart from "../cart/EmptyCart";
+import store from "../../store";
+import { formatCurrency } from "../../utils/helpers";
+import { useState } from "react";
+import { fetchAddress } from "../user/userSlice";
 // https://uibakery.io/regex-library/phone-number
 const isValidPhone = (str) =>
   /^\+?\d{1,4}?[-.\s]?\(?\d{1,3}?\)?[-.\s]?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,9}$/.test(
@@ -13,43 +19,29 @@ const isValidPhone = (str) =>
 const styleInput = "mb-5 flex gap-2 flex-col sm:flex-row sm:items-center"
 const styleLabel = "sm:basis-40"
 
-const fakeCart = [
-  {
-    pizzaId: 12,
-    name: "Mediterranean",
-    quantity: 2,
-    unitPrice: 16,
-    totalPrice: 32,
-  },
-  {
-    pizzaId: 6,
-    name: "Vegetale",
-    quantity: 1,
-    unitPrice: 13,
-    totalPrice: 13,
-  },
-  {
-    pizzaId: 11,
-    name: "Spinach and Mushroom",
-    quantity: 1,
-    unitPrice: 15,
-    totalPrice: 15,
-  },
-];
+
 
 function CreateOrder() {
+  const [withPriority, setWithPriority] = useState(false);
+  const dispatch = useDispatch()
+  const totalCartPrice = useSelector(getTotalCartPrice)
+  const priorityPrice = withPriority ? totalCartPrice * 0.2 : 0
+  const totalPrice = totalCartPrice + priorityPrice
   const navigate = useNavigation();
   const isSubmiting = navigate.state === 'submitting'
 
   const name = useSelector((state) => state.user.userName)
 
   const formErrors = useActionData()
-  // const [withPriority, setWithPriority] = useState(false);
-  const cart = fakeCart;
+  const cart = useSelector(getCart);
 
+
+
+  if (!cart.length) return <EmptyCart />
   return (
     <div className="px-4 py-6">
-      <h2 className="text-xl font-semibold mb-8" >Ready to order? Let's go!</h2>
+      <h2 className="text-xl font-semibold mb-8" >Ready to order? Lets go!</h2>
+      <button onClick={() => dispatch(fetchAddress())}>asda</button>
 
       <Form method="POST"  >
         <div className={styleInput} >
@@ -66,7 +58,7 @@ function CreateOrder() {
         </div>
 
         <div className={styleInput} >
-          <labe className={styleLabel}>Address</labe>
+          <label className={styleLabel}>Address</label>
           <div className="grow">
             <input className="input w-full" type="text" name="address" required />
           </div>
@@ -78,15 +70,15 @@ function CreateOrder() {
             type="checkbox"
             name="priority"
             id="priority"
-          // value={withPriority}
-          // onChange={(e) => setWithPriority(e.target.checked)}
+            value={withPriority}
+            onChange={(e) => setWithPriority(e.target.checked)}
           />
           <label className="font-medium" htmlFor="priority">Want to yo give your order priority?</label>
         </div>
 
         <div>
           <input type="hidden" name="cart" value={JSON.stringify(cart)} />
-          <Button type='primary' disabled={isSubmiting} >{isSubmiting ? 'Placing order...' : ' Order now'}</Button>
+          <Button type='primary' disabled={isSubmiting} >{isSubmiting ? 'Placing order...' : ` Order now for ${formatCurrency(totalPrice)}`}</Button>
         </div>
       </Form>
     </div>
@@ -100,7 +92,7 @@ export async function action({ request }) {
   const order = {
     ...data,
     cart: JSON.parse(data.cart),
-    priority: data.priority === "on",
+    priority: data.priority === "true",
   }
 
   const errors = {}
@@ -113,6 +105,7 @@ export async function action({ request }) {
 
   const newOrder = await createOrder(order)
 
+  store.dispatch(clearCart())
 
   return redirect(`/order/${newOrder.id}`)
 

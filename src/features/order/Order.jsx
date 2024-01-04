@@ -23,6 +23,8 @@ function Order() {
     estimatedDelivery,
     cart,
   } = order;
+
+
   const deliveryIn = calcMinutesLeft(estimatedDelivery);
 
   return (
@@ -37,7 +39,7 @@ function Order() {
       </div>
 
       <ul className="divide-y divide-stone-200 border-b border-t">
-        {cart.map((item) => <OrderItem key={item.id} item={item} />)}
+        {cart.map((item, index) => <OrderItem key={index} item={item} />)}
       </ul>
 
       <div className="flex items-center justify-between flex-wrap gap-2 bg-stone-200 py-5 px-6">
