@@ -30,7 +30,9 @@ function CreateOrder() {
   const navigate = useNavigation();
   const isSubmiting = navigate.state === 'submitting'
 
-  const name = useSelector((state) => state.user.userName)
+  const { name, status: addresStatus, position, address, error: errorAddress } = useSelector((state) => state.user)
+
+  const isLoadingAddress = addresStatus === 'loading'
 
   const formErrors = useActionData()
   const cart = useSelector(getCart);
@@ -41,7 +43,7 @@ function CreateOrder() {
   return (
     <div className="px-4 py-6">
       <h2 className="text-xl font-semibold mb-8" >Ready to order? Lets go!</h2>
-      <button onClick={() => dispatch(fetchAddress())}>asda</button>
+
 
       <Form method="POST"  >
         <div className={styleInput} >
@@ -57,11 +59,15 @@ function CreateOrder() {
           </div>
         </div>
 
-        <div className={styleInput} >
+        <div className={styleInput + ' ' + 'relative'} >
           <label className={styleLabel}>Address</label>
           <div className="grow">
-            <input className="input w-full" type="text" name="address" required />
+            <input defaultValue={address} className="input w-full" type="text" name="address" required disabled={isLoadingAddress} />
           </div>
+          {!position.latitude && <span className="absolute right-[3px] z-5">
+
+            <Button disabled={isLoadingAddress} type='small' onClick={(e) => { e.preventDefault(); dispatch(fetchAddress()) }}>asda</Button>
+          </span>}
         </div>
 
         <div className="mb-12  flex gap-5 items-center " >
@@ -74,10 +80,12 @@ function CreateOrder() {
             onChange={(e) => setWithPriority(e.target.checked)}
           />
           <label className="font-medium" htmlFor="priority">Want to yo give your order priority?</label>
+          {addresStatus === 'error' && <p className="text-xs mt-2 text-red-700 bg-red-100 p-2 rounded-md" > {errorAddress}</p>}
         </div>
 
         <div>
           <input type="hidden" name="cart" value={JSON.stringify(cart)} />
+          <input type="hidden" name="position" value={position.longitude ? `${position.latitude},${position.longitude}` : ''} />
           <Button type='primary' disabled={isSubmiting} >{isSubmiting ? 'Placing order...' : ` Order now for ${formatCurrency(totalPrice)}`}</Button>
         </div>
       </Form>
@@ -95,13 +103,15 @@ export async function action({ request }) {
     priority: data.priority === "true",
   }
 
+  console.log(data)
+
   const errors = {}
   if (!isValidPhone(order.phone)) {
     errors.phone = "Invalid phone number"
   }
   if (Object.keys(errors).length > 0) return errors
 
-  //fine
+
 
   const newOrder = await createOrder(order)
 
